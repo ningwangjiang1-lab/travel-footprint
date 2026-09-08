@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>旅行足迹 · 手机 Demo</title>
+<style>
+  /* ===== 设计 Token（产品文档 §3.1 色彩体系） ===== */
+  :root {
+    --brown:#8B5E3C; --brown-d:#6E4930;
+    --cream:#F7F2EA; --olive:#6B7F5E; --orange:#E88D4B; --night:#0F1B33;
+    --ink:#3A2C1F; --ink-2:#8A7A68; --ink-3:#B4A893;
+    --card:#FFFDF8; --line:#EADFCB; --ring:rgba(139,94,60,.14);
+    --c-transport:#8B5E3C; --c-hotel:#6B7F5E; --c-food:#E88D4B;
+    --c-ticket:#C4643F; --c-shop:#C79A3B; --c-other:#9C8E7C;
+    --shadow:0 6px 20px rgba(90,66,40,.08);
+  }
+  body.dark {
+    --cream:#161310; --card:#221C15; --ink:#F1E9DB; --ink-2:#A89B88;
+    --ink-3:#6B6150; --line:#2E2720; --ring:rgba(232,141,75,.22);
+    --shadow:0 8px 24px rgba(0,0,0,.45);
+  }
+
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--cream); color:var(--ink);
+    -webkit-font-smoothing:antialiased; transition:background .35s,color .35s;
+  }
+
+  /* ===== 桌面舞台：手机框 ===== */
+  .stage {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:26px;
+    background:
+      radial-gradient(circle at 18% 12%, color-mix(in srgb,var(--orange) 14%,transparent), transparent 40%),
+      radial-gradient(circle at 82% 88%, color-mix(in srgb,var(--olive) 14%,transparent), transparent 42%),
+      var(--cream);
+  }
+  .phone {
+    position:relative; width:390px; height:min(840px,94vh);
+    background:var(--cream); border-radius:46px; overflow:hidden;
+    border:1px solid var(--line); box-shadow:0 30px 80px rgba(60,42,20,.28);
+    display:flex; flex-direction:column; transition:background .35s;
+  }
+
+  /* 状态栏 + 灵动岛 */
+  .statusbar { height:40px; flex-shrink:0; position:relative; display:flex; align-items:center; justify-content:space-between; padding:0 24px; font-size:13px; font-weight:600; }
+  .notch { position:absolute; top:9px; left:50%; transform:translateX(-50%); width:104px; height:24px; background:#000; border-radius:99px; }
+  .statusbar .right { display:flex; gap:5px; font-size:12px; }
+
+  /* App 顶栏 */
+  .appbar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:6px 18px 12px; }
+  .brand { font-weight:800; font-size:19px; letter-spacing:.5px; display:flex; align-items:center; gap:8px; }
+  .brand .dot { width:9px; height:9px; border-radius:50%; background:var(--orange); box-shadow:0 0 0 4px color-mix(in srgb,var(--orange) 24%,transparent); }
+  .theme-btn { border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:13px; padding:7px 12px; border-radius:999px; cursor:pointer; }
+
+  /* 内容区（滚动） */
+  .screen { flex:1; overflow-y:auto; padding:4px 16px 20px; scrollbar-width:none; }
+  .screen::-webkit-scrollbar { display:none; }
+  .page { display:none; animation:pageIn .4s ease; }
+  .page.active { display:block; }
+  @keyframes pageIn { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+  .page-head { font-size:22px; margin-bottom:3px; }
+  .page-sub { color:var(--ink-2); font-size:13px; margin-bottom:18px; }
+  .section-title { font-size:12.5px; color:var(--ink-2); letter-spacing:1px; margin:16px 0 12px; }
+
+  /* ===== 底部 tab ===== */
+  .tabbar { flex-shrink:0; display:flex; border-top:1px solid var(--line); background:var(--card); padding:6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--ink-3); font-size:11px; cursor:pointer; padding:5px 0; transition:.2s; }
+  .tab .ti { font-size:21px; line-height:1; }
+  .tab.active { color:var(--brown); font-weight:600; }
+
+  /* ===== 统计卡 ===== */
+  .kpi-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:8px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px 14px; box-shadow:var(--shadow); }
+  .kpi .label { font-size:11.5px; color:var(--ink-2); margin-bottom:6px; }
+  .kpi .value { font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .kpi .value small { font-size:13px; font-weight:500; color:var(--ink-2); margin-left:1px; }
+  .kpi .hint { font-size:11px; color:var(--olive); margin-top:4px; }
+
+  /* ===== 攻略卡片（单列） ===== */
+  .guide-card { background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-bottom:14px; box-shadow:var(--shadow); }
+  .cover { height:128px; display:flex; align-items:flex-end; padding:12px; color:#fff; position:relative; }
+  .cover .tag { background:rgba(255,255,255,.24); backdrop-filter:blur(4px); padding:3px 10px; border-radius:999px; font-size:11.5px; }
+  .guide-body { padding:14px; }
+  .guide-body h3 { font-size:16px; margin-bottom:5px; }
+  .guide-body .meta { font-size:12.5px; color:var(--ink-2); display:flex; gap:10px; flex-wrap:wrap; }
+  .foot { display:flex; align-items:center; margin-top:12px; }
+  .progress { height:5px; background:var(--line); border-radius:99px; flex:1; margin-right:10px; overflow:hidden; }
+  .progress > span { display:block; height:100%; background:var(--orange); border-radius:99px; }
+  .foot .pct { font-size:11.5px; color:var(--ink-2); }
+
+  /* ===== FAB（新建攻略，仅首页显示） ===== */
+  .fab {
+    position:absolute; right:18px; bottom:76px; width:56px; height:56px; border-radius:50%;
+    background:var(--brown); color:#FFFDF8; border:none; font-size:28px; line-height:1;
+    cursor:pointer; box-shadow:0 12px 26px rgba(139,94,60,.42); z-index:5; display:none; transition:.2s;
+  }
+  .fab.show { display:block; }
+
+  /* ===== 编辑页 ===== */
+  .info-bar { display:flex; gap:13px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 15px; margin-bottom:14px; box-shadow:var(--shadow); }
+  .info-cover { width:58px; height:58px; border-radius:12px; background:linear-gradient(135deg,var(--orange),var(--brown)); display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; flex-shrink:0; }
+  .info-bar h3 { font-size:16px; margin-bottom:3px; }
+  .info-bar .sub { font-size:12px; color:var(--ink-2); }
+  .companion-tag { display:inline-block; background:var(--ring); color:var(--brown); font-size:11px; padding:2px 9px; border-radius:999px; margin-top:6px; }
+
+  .day { background:var(--card); border:1px solid var(--line); border-radius:16px; margin-bottom:12px; overflow:hidden; box-shadow:var(--shadow); }
+  .day-head { display:flex; align-items:center; gap:9px; padding:13px 15px; border-bottom:1px solid var(--line); }
+  .day-head .when { font-weight:700; font-size:14px; }
+  .day-head .route { font-size:11.5px; color:var(--brown); background:var(--ring); padding:2px 9px; border-radius:999px; }
+  .day-head .fold { margin-left:auto; color:var(--ink-3); font-size:12px; }
+  .day.collapsed .day-body, .day.collapsed .quickbar { display:none; }
+  .day-body { padding:4px 0; }
+  .item { display:flex; align-items:flex-start; gap:11px; padding:10px 15px; }
+  .item + .item { border-top:1px dashed var(--line); }
+  .ic { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .ic.transport{ background:color-mix(in srgb,var(--c-transport) 16%,transparent); }
+  .ic.location { background:color-mix(in srgb,var(--c-food) 18%,transparent); }
+  .ic.food     { background:color-mix(in srgb,var(--c-hotel) 16%,transparent); }
+  .ic.hotel    { background:color-mix(in srgb,var(--night) 13%,transparent); }
+  .item .txt { flex:1; font-size:14px; line-height:1.5; }
+  .item .txt .note { color:var(--ink-2); font-size:12px; margin-left:5px; }
+  .item .seq { font-weight:700; color:var(--c-ticket); margin-right:2px; }
+  .check { flex-shrink:0; margin-top:3px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; background:var(--olive); }
+  .quickbar { display:flex; gap:7px; padding:11px 14px; border-top:1px solid var(--line); }
+  .quickbar button { flex:1; border:1px dashed var(--ink-3); background:transparent; color:var(--ink-2); border-radius:10px; padding:8px 0; font-size:12.5px; cursor:pointer; }
+
+  .share-btn { width:100%; background:var(--brown); color:#fff; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:600; cursor:pointer; margin-top:6px; box-shadow:0 8px 20px rgba(139,94,60,.3); }
+
+  /* ===== 底部滑动面板（添加条目） ===== */
+  .sheet-mask { position:absolute; inset:0; background:rgba(40,26,12,.4); opacity:0; pointer-events:none; transition:.3s; z-index:8; }
+  .sheet-mask.open { opacity:1; pointer-events:auto; }
+  .bottom-sheet {
+    position:absolute; left:0; right:0; bottom:0; z-index:9;
+    background:var(--card); border-radius:22px 22px 0 0; padding:12px 18px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(105%); transition:transform .32s cubic-bezier(.4,0,.2,1); box-shadow:0 -10px 30px rgba(60,42,20,.16);
+  }
+  .bottom-sheet.open { transform:translateY(0); }
+  .sheet-handle { width:38px; height:4px; border-radius:99px; background:var(--ink-3); margin:0 auto 14px; }
+  .bottom-sheet h4 { font-size:14px; margin-bottom:14px; }
+  .sheet-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .sheet-grid button { border:1px solid var(--line); background:var(--cream); border-radius:14px; padding:14px 0; cursor:pointer; font-size:13px; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--ink); }
+  .sheet-grid .e { font-size:22px; }
+
+  /* ===== 地图页 ===== */
+  .map-stats { display:flex; gap:8px; margin-bottom:12px; }
+  .map-stats .cell { flex:1; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 12px; text-align:center; box-shadow:var(--shadow); }
+  .map-stats .cell b { font-size:20px; display:block; }
+  .map-stats .cell span { font-size:11px; color:var(--ink-2); }
+  .map-panel { position:relative; height:390px; border-radius:18px; border:1px solid var(--line); overflow:hidden;
+    background:
+      linear-gradient(rgba(139,94,60,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(139,94,60,.05) 1px,transparent 1px),
+      radial-gradient(circle at 55% 42%,#f3e8d3,#e7d8bd);
+    background-size:30px 30px,30px 30px,100% 100%; transition:background .4s;
+  }
+  body.dark .map-panel {
+    background:
+      radial-gradient(circle at 20% 20%,rgba(255,255,255,.06) 1px,transparent 1px),
+      radial-gradient(circle at 80% 60%,rgba(255,255,255,.05) 1px,transparent 1px),
+      linear-gradient(#0F1B33,#0A1428);
+    background-size:64px 64px,84px 84px,100% 100%;
+  }
+  .pin { position:absolute; transform:translate(-50%,-50%); text-align:center; }
+  .pin .spot { width:13px; height:13px; border-radius:50%; background:var(--orange); margin:0 auto; position:relative; }
+  .pin.lit .spot::after { content:""; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--orange); animation:pulse 2.2s ease-out infinite; }
+  @keyframes pulse { 0%{transform:scale(.5); opacity:.9;} 100%{transform:scale(1.6); opacity:0;} }
+  body.dark .pin .spot { background:#FFD27A; box-shadow:0 0 10px 2px rgba(255,210,122,.6); }
+  .pin.gray .spot { background:var(--ink-3); }
+  .pin .nm { font-size:11px; color:var(--ink); margin-top:2px; white-space:nowrap; }
+  body.dark .pin .nm { color:#cdd8f0; }
+  .map-legend { position:absolute; left:12px; bottom:12px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 11px; font-size:11px; color:var(--ink-2); display:flex; gap:12px; }
+  .city-chips { display:flex; gap:8px; overflow-x:auto; margin:12px 0 4px; padding-bottom:4px; scrollbar-width:none; }
+  .city-chips::-webkit-scrollbar{display:none;}
+  .city-chips .chip { flex-shrink:0; font-size:12.5px; padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink-2); }
+  .city-chips .chip.on { background:var(--brown); color:#fff; border-color:var(--brown); }
+
+  /* ===== 账单页 ===== */
+  .bill-top { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .budget-track { height:6px; background:var(--line); border-radius:99px; margin-top:8px; overflow:hidden; }
+  .budget-track > span { display:block; height:100%; background:linear-gradient(90deg,var(--olive),var(--orange)); border-radius:99px; }
+  .chart-card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:var(--shadow); }
+  .chart-card h4 { font-size:13.5px; margin-bottom:14px; }
+  .donut-wrap { display:flex; align-items:center; gap:20px; }
+  .donut { position:relative; width:128px; height:128px; border-radius:50%; flex-shrink:0;
+    background:conic-gradient(var(--c-transport) 0 38%,var(--c-hotel) 38% 66.5%,var(--c-food) 66.5% 84.3%,var(--c-ticket) 84.3% 93.8%,var(--c-shop) 93.8% 97.6%,var(--c-other) 97.6% 100%); }
+  .donut::after { content:""; position:absolute; inset:27%; background:var(--card); border-radius:50%; }
+  .donut .center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:1; }
+  .donut .center b { font-size:15px; }
+  .donut .center span { font-size:10px; color:var(--ink-2); }
+  .legend { flex:1; display:flex; flex-direction:column; gap:7px; }
+  .legend .li { display:flex; align-items:center; gap:8px; font-size:12.5px; }
+  .legend .sw { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .legend .nm { flex:1; }
+  .legend .amt { color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .legend .pct { color:var(--ink-3); width:34px; text-align:right; font-variant-numeric:tabular-nums; }
+  .trend svg { width:100%; height:auto; display:block; }
+  .trend .axis { font-size:9.5px; fill:var(--ink-3); }
+  .bill-table { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); }
+  .filters { display:flex; gap:7px; padding:13px 14px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none; }
+  .filters::-webkit-scrollbar{display:none;}
+  .filters .chip { flex-shrink:0; font-size:12px; padding:6px 13px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink-2); }
+  .filters .chip.active { background:var(--brown); color:#fff; border-color:var(--brown); }
+  .row { display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .row:last-child { border-bottom:none; }
+  .row .cat { font-size:10.5px; padding:3px 8px; border-radius:999px; color:#fff; flex-shrink:0; }
+  .row .note { flex:1; color:var(--ink-2); font-size:12.5px; }
+  .row .amt { font-variant-numeric:tabular-nums; font-weight:600; }
+
+  /* ===== 色板 ===== */
+  .palette { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px 15px; margin-top:16px; box-shadow:var(--shadow); }
+  .palette h4 { font-size:12.5px; color:var(--ink-2); margin-bottom:11px; }
+  .swatches { display:flex; gap:10px; flex-wrap:wrap; }
+  .sw { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--ink-2); }
+  .sw .chip2 { width:20px; height:20px; border-radius:6px; border:1px solid var(--line); }
+  .sw code { font-size:10px; background:var(--ring); padding:1px 5px; border-radius:5px; color:var(--ink); }
+
+  /* ===== 响应式：真实手机全屏 ===== */
+  @media (max-width:430px){
+    .stage { padding:0; }
+    .phone { width:100%; height:100dvh; border-radius:0; border:none; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+<div class="phone">
+
+  <!-- 状态栏 -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="notch"></span>
+    <span class="right">▮▮▮ 🔋</span>
+  </div>
+
+  <!-- 顶栏 -->
+  <div class="appbar">
+    <div class="brand"><span class="dot"></span>旅行足迹</div>
+    <button class="theme-btn" id="themeBtn">🌙</button>
+  </div>
+
+  <!-- 内容 -->
+  <div class="screen">
+
+    <!-- 首页 -->
+    <section class="page active" id="page-home">
+      <h1 class="page-head">我的旅行手账</h1>
+      <p class="page-sub">记录足迹，点亮地图，把旅程写成有温度的攻略。</p>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="label">点亮城市</div><div class="value">6</div><div class="hint">▲ 本月 +2</div></div>
+        <div class="kpi"><div class="label">总花费</div><div class="value">¥8.4k</div><div class="hint">3 段旅程</div></div>
+        <div class="kpi"><div class="label">旅行天数</div><div class="value">9</div><div class="hint">2026 年</div></div>
+      </div>
+
+      <div class="section-title">我的攻略</div>
+      <div class="guide-card">
+        <div class="cover" style="background:linear-gradient(135deg,#E88D4B,#8B5E3C)"><span class="tag">丝路 · 12 地点</span></div>
+        <div class="guide-body">
+          <h3>西北丝路自由行</h3>
+          <div class="meta"><span>📍 郑州 → 敦煌</span><span>📅 07.06 – 07.15</span></div>
+          <div class="foot"><div class="progress"><span style="width:100%"></span></div><span class="pct">已完成</span></div>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="cover" style="background:linear-gradient(135deg,#6B7F5E,#2f6f6a)"><span class="tag">海岛 · 4 地点</span></div>
+        <div class="guide-body">
+          <h3>海岛慢游</h3>
+          <div class="meta"><span>📍 三亚</span><span>📅 03.18 – 03.22</span></div>
+          <div class="foot"><div class="progress"><span style="width:100%"></span></div><span class="pct">已完成</span></div>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="cover" style="background:linear-gradient(135deg,#C79A3B,#8B5E3C)"><span class="tag">古都 · 3 地点</span></div>
+        <div class="guide-body">
+          <h3>古都周末</h3>
+          <div class="meta"><span>📍 西安</span><span>📅 2025.11.08 – 11.10</span></div>
+          <div class="foot"><div class="progress"><span style="width:60%"></span></div><span class="pct">规划 60%</span></div>
+        </div>
+      </div>
+
+      <div class="palette">
+        <h4>设计色板（大地色系 · 胶片感）</h4>
+        <div class="swatches">
+          <span class="sw"><span class="chip2" style="background:#8B5E3C"></span>暖棕 <code>#8B5E3C</code></span>
+          <span class="sw"><span class="chip2" style="background:#F7F2EA"></span>米白 <code>#F7F2EA</code></span>
+          <span class="sw"><span class="chip2" style="background:#6B7F5E"></span>橄榄绿 <code>#6B7F5E</code></span>
+          <span class="sw"><span class="chip2" style="background:#E88D4B"></span>日落橙 <code>#E88D4B</code></span>
+          <span class="sw"><span class="chip2" style="background:#0F1B33"></span>深蓝星空 <code>#0F1B33</code></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 地图 -->
+    <section class="page" id="page-map">
+      <h1 class="page-head">我的足迹地图</h1>
+      <p class="page-sub">每点亮一座城，就是一次抵达。</p>
+
+      <div class="map-stats">
+        <div class="cell"><b>3</b><span>个国家</span></div>
+        <div class="cell"><b>6</b><span>个城市</span></div>
+        <div class="cell"><b>12</b><span>个地点</span></div>
+      </div>
+
+      <div class="map-panel">
+        <span class="pin lit" style="left:44%;top:50%"><div class="spot"></div><div class="nm">兰州</div></span>
+        <span class="pin lit" style="left:52%;top:40%"><div class="spot"></div><div class="nm">武威</div></span>
+        <span class="pin lit" style="left:42%;top:32%"><div class="spot"></div><div class="nm">张掖</div></span>
+        <span class="pin lit" style="left:48%;top:24%"><div class="spot"></div><div class="nm">嘉峪关</div></span>
+        <span class="pin lit" style="left:36%;top:22%"><div class="spot"></div><div class="nm">敦煌</div></span>
+        <span class="pin lit" style="left:64%;top:62%"><div class="spot"></div><div class="nm">西安</div></span>
+        <span class="pin gray" style="left:56%;top:68%"><div class="spot"></div><div class="nm">成都</div></span>
+        <span class="pin gray" style="left:18%;top:36%"><div class="spot"></div><div class="nm">乌鲁木齐</div></span>
+        <span class="pin gray" style="left:28%;top:70%"><div class="spot"></div><div class="nm">拉萨</div></span>
+        <div class="map-legend"><span>● 已点亮</span><span>○ 未点亮</span></div>
+      </div>
+
+      <div class="city-chips">
+        <span class="chip on">全部</span><span class="chip">兰州</span><span class="chip">武威</span><span class="chip">张掖</span><span class="chip">嘉峪关</span><span class="chip">敦煌</span><span class="chip">西安</span>
+      </div>
+
+      <div class="bill-table" style="margin-top:6px">
+        <div class="row"><span class="cat" style="background:var(--c-food)">兰州</span><span class="note">中山桥 · 白塔山 · 张掖路步行街</span><span style="font-size:12px;color:var(--ink-2)">3 处</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-ticket)">张掖</span><span class="note">七彩丹霞 · 马蹄寺 · 大佛寺</span><span style="font-size:12px;color:var(--ink-2)">3 处</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-other)">敦煌</span><span class="note">鸣沙山月牙泉 · 莫高窟</span><span style="font-size:12px;color:var(--ink-2)">2 处</span></div>
+      </div>
+    </section>
+
+    <!-- 编辑 -->
+    <section class="page" id="page-editor">
+      <div class="info-bar">
+        <div class="info-cover">🏔️</div>
+        <div>
+          <h3>西北丝路自由行</h3>
+          <div class="sub">📍 郑州 → 敦煌 ｜ 📅 07.06 – 07.15</div>
+          <span class="companion-tag">👥 和朋友 · 2 人</span>
+        </div>
+      </div>
+
+      <div class="day">
+        <div class="day-head"><span class="when">7月6日（周一）</span><span class="route">郑州 → 兰州</span><span class="fold">▾</span></div>
+        <div class="day-body">
+          <div class="item"><span class="ic transport">🚞</span><span class="txt">Z105 郑州站 01:27 – 14:57 兰州站</span></div>
+          <div class="item"><span class="ic transport">🚇</span><span class="txt">乘地铁至酒店放行李</span></div>
+          <div class="item"><span class="ic transport">🚶🏻‍♂️</span><span class="txt">步行至张掖路步行街</span></div>
+          <div class="item"><span class="ic location">📍</span><span class="txt"><span class="seq">①</span>张掖路步行街</span><span class="check">✓</span></div>
+          <div class="item"><span class="ic food">🍜</span><span class="txt">马子禄牛肉面 · 茹记烤肉 · 马三洋芋片<span class="note">（美食清单）</span></span></div>
+          <div class="item"><span class="ic transport">🚶🏻‍♂️</span><span class="txt">步行至中山桥</span></div>
+          <div class="item"><span class="ic location">📍</span><span class="txt"><span class="seq">②</span>中山桥</span><span class="check">✓</span></div>
+          <div class="item"><span class="ic location">📍</span><span class="txt"><span class="seq">③</span>白塔山公园</span></div>
+          <div class="item"><span class="ic hotel">🏨</span><span class="txt">兰州宜佳酒店<span class="note">（张掖路西关地铁站店）</span></span></div>
+        </div>
+        <div class="quickbar"><button id="openSheet">＋ 添加条目</button></div>
+      </div>
+
+      <div class="day collapsed">
+        <div class="day-head"><span class="when">7月7日（周二）</span><span class="route">兰州</span><span class="fold">▸</span></div>
+      </div>
+      <div class="day collapsed">
+        <div class="day-head"><span class="when">7月8日（周三）</span><span class="route">兰州 → 武威</span><span class="fold">▸</span></div>
+      </div>
+
+      <button class="share-btn">📤 生成分享图</button>
+    </section>
+
+    <!-- 账单 -->
+    <section class="page" id="page-bill">
+      <h1 class="page-head">旅行账单</h1>
+      <p class="page-sub">西北丝路自由行 · 07.06 – 07.15</p>
+
+      <div class="bill-top">
+        <div class="kpi"><div class="label">总支出</div><div class="value">¥8,420</div><div class="hint">9 天 2 人</div></div>
+        <div class="kpi"><div class="label">日均</div><div class="value">¥935</div><div class="hint">人均 ¥468</div></div>
+        <div class="kpi"><div class="label">预算</div><div class="value">84%</div><div class="budget-track"><span style="width:84%"></span></div><div class="hint">预算 ¥10,000</div></div>
+      </div>
+
+      <div class="chart-card">
+        <h4>分类支出</h4>
+        <div class="donut-wrap">
+          <div class="donut"><div class="center"><b>¥8,420</b><span>总支出</span></div></div>
+          <div class="legend">
+            <div class="li"><span class="sw" style="background:var(--c-transport)"></span><span class="nm">交通</span><span class="amt">¥3,200</span><span class="pct">38%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-hotel)"></span><span class="nm">住宿</span><span class="amt">¥2,400</span><span class="pct">29%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-food)"></span><span class="nm">餐饮</span><span class="amt">¥1,500</span><span class="pct">18%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-ticket)"></span><span class="nm">门票</span><span class="amt">¥800</span><span class="pct">9%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-shop)"></span><span class="nm">购物</span><span class="amt">¥320</span><span class="pct">4%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-other)"></span><span class="nm">其他</span><span class="amt">¥200</span><span class="pct">2%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card trend">
+        <h4>每日支出趋势</h4>
+        <svg viewBox="0 0 320 170" role="img" aria-label="每日支出趋势折线图">
+          <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#E88D4B" stop-opacity=".35"/><stop offset="1" stop-color="#E88D4B" stop-opacity="0"/>
+          </linearGradient></defs>
+          <line x1="20" y1="142" x2="300" y2="142" stroke="var(--line)" stroke-width="1"/>
+          <polygon points="20,142 55,126 90,116 125,124 160,112 195,94 230,84 265,68 300,56 300,142" fill="url(#area)"/>
+          <polyline points="20,142 55,126 90,116 125,124 160,112 195,94 230,84 265,68 300,56" fill="none" stroke="#E88D4B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <g class="axis"><text x="20" y="158">7.6</text><text x="90" y="158">7.8</text><text x="160" y="158">7.10</text><text x="230" y="158">7.12</text><text x="290" y="158">7.15</text></g>
+        </svg>
+      </div>
+
+      <div class="bill-table">
+        <div class="filters"><span class="chip active">全部</span><span class="chip">交通</span><span class="chip">住宿</span><span class="chip">餐饮</span><span class="chip">门票</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-transport)">交通</span><span class="note">高铁 Z105 郑州 – 兰州</span><span class="amt">¥1,020</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-hotel)">住宿</span><span class="note">兰州宜佳酒店 · 2 晚</span><span class="amt">¥560</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-ticket)">门票</span><span class="note">七彩丹霞</span><span class="amt">¥160</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-food)">餐饮</span><span class="note">马子禄牛肉面 · 牛肉小饭</span><span class="amt">¥86</span></div>
+        <div class="row"><span class="cat" style="background:var(--c-ticket)">门票</span><span class="note">莫高窟</span><span class="amt">¥280</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <nav class="tabbar">
+    <button class="tab active" data-page="home"><span class="ti">🏠</span>首页</button>
+    <button class="tab" data-page="map"><span class="ti">🗺️</span>地图</button>
+    <button class="tab" data-page="editor"><span class="ti">📝</span>编辑</button>
+    <button class="tab" data-page="bill"><span class="ti">💳</span>账单</button>
+  </nav>
+
+  <!-- 新建攻略 FAB（仅首页） -->
+  <button class="fab show" id="fab" title="新建攻略">＋</button>
+
+  <!-- 底部滑动面板 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="bottom-sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <h4>添加条目</h4>
+    <div class="sheet-grid">
+      <button><span class="e">🚞</span>交通</button>
+      <button><span class="e">📍</span>景点</button>
+      <button><span class="e">🍜</span>美食</button>
+      <button><span class="e">🏨</span>住宿</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tabbar .tab');
+  const pages = document.querySelectorAll('.page');
+  const fab = document.getElementById('fab');
+
+  function show(page){
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.page === page));
+    pages.forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+    fab.classList.toggle('show', page === 'home');
+    document.querySelector('.screen').scrollTop = 0;
+  }
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.page)));
+  fab.addEventListener('click', () => show('editor'));
+
+  const themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', () => {
+    const dark = document.body.classList.toggle('dark');
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+  });
+
+  // 底部滑动面板（添加条目）
+  const sheet = document.getElementById('sheet');
+  const mask = document.getElementById('sheetMask');
+  document.getElementById('openSheet').addEventListener('click', () => {
+    sheet.classList.add('open'); mask.classList.add('open');
+  });
+  mask.addEventListener('click', () => {
+    sheet.classList.remove('open'); mask.classList.remove('open');
+  });
+</script>
+</body>
+</html>
