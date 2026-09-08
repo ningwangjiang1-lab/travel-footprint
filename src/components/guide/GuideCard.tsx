@@ -2,20 +2,22 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, animate } from 'framer-motion'
 import type { Guide } from '../../types'
-import { formatFullDate } from '../../lib/format'
+import { formatFullDate, daysBetween } from '../../lib/format'
 
 const DELETE_WIDTH = 84
 
 interface GuideCardProps {
   guide: Guide
   onDelete: () => void
+  onToggleComplete: () => void
 }
 
 /** 攻略卡片（UI 规范 §7.4，无封面，支持左滑删除） */
-export default function GuideCard({ guide, onDelete }: GuideCardProps) {
+export default function GuideCard({ guide, onDelete, onToggleComplete }: GuideCardProps) {
   const navigate = useNavigate()
   const x = useMotionValue(0)
   const [open, setOpen] = useState(false)
+  const completed = guide.status === 'completed'
   // 标记是否刚发生了拖拽，避免拖拽后的 click 误触导航
   const draggedRef = useRef(false)
 
@@ -65,13 +67,26 @@ export default function GuideCard({ guide, onDelete }: GuideCardProps) {
         }}
       >
         <div className="guide-body">
-          <h3>{guide.title}</h3>
-          <div className="meta">
-            {guide.destination && <span>📍 {guide.destination}</span>}
-            <span>
-              📅 {formatFullDate(guide.startDate)} – {formatFullDate(guide.endDate)}
-            </span>
+          <div className="guide-info">
+            <h3>{guide.title}</h3>
+            <div className="meta">
+              {guide.destination && <span>📍 {guide.destination}</span>}
+              <span>
+                📅 {formatFullDate(guide.startDate)} – {formatFullDate(guide.endDate)}（{daysBetween(guide.startDate, guide.endDate)}天）
+              </span>
+            </div>
           </div>
+          <button
+            className={`complete-check${completed ? ' checked' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleComplete()
+            }}
+            aria-label={completed ? '标记为未完成' : '标记为已完成'}
+            aria-pressed={completed}
+          >
+            {completed ? '✓' : ''}
+          </button>
         </div>
       </motion.div>
     </div>

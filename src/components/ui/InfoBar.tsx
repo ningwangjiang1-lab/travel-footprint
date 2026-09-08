@@ -1,5 +1,5 @@
 import type { Guide } from '../../types'
-import { formatFullDate } from '../../lib/format'
+import { formatFullDate, daysBetween } from '../../lib/format'
 
 interface InfoBarProps {
   guide: Guide
@@ -7,7 +7,7 @@ interface InfoBarProps {
 
 /** 攻略信息栏（UI 规范 §7.4） */
 export default function InfoBar({ guide }: InfoBarProps) {
-  const dateRange = `${formatFullDate(guide.startDate)} – ${formatFullDate(guide.endDate)}`
+  const dateRange = `${formatFullDate(guide.startDate)} – ${formatFullDate(guide.endDate)}（${daysBetween(guide.startDate, guide.endDate)}天）`
   return (
     <div className="info-bar">
       <div style={{ flex: 1, minWidth: 0 }}>

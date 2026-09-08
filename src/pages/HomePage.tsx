@@ -6,6 +6,7 @@ import GuideCard from '../components/guide/GuideCard'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/useUi'
 import { aggregateLocations } from '../lib/locations'
+import { daysBetween } from '../lib/format'
 import type { Guide } from '../types'
 
 /** 首页（开发计划 Step 3）：KPI 概览 + 攻略列表 + 空状态 */
@@ -13,13 +14,16 @@ export default function HomePage() {
   const guides = useStore((s) => s.guides)
   const locations = useStore((s) => s.locations)
   const removeGuide = useStore((s) => s.removeGuide)
+  const updateGuide = useStore((s) => s.updateGuide)
   const openNewGuide = useUi((s) => s.openNewGuide)
 
   const [confirmDelete, setConfirmDelete] = useState<Guide | null>(null)
 
   const cityCount = aggregateLocations(locations).cities
-  const tripCount = guides.filter((g) => g.status === 'completed').length
-  const totalDays = guides.reduce((s, g) => s + g.days.length, 0)
+  // 旅行次数 / 旅行天数：仅统计已完成的旅程
+  const completedGuides = guides.filter((g) => g.status === 'completed')
+  const tripCount = completedGuides.length
+  const totalDays = completedGuides.reduce((s, g) => s + daysBetween(g.startDate, g.endDate), 0)
 
   // 按出发时间从新到旧排列：越新的攻略越靠上，越早的越靠下
   const sortedGuides = [...guides].sort((a, b) =>
@@ -54,7 +58,16 @@ export default function HomePage() {
       ) : (
         <>
           {sortedGuides.map((g) => (
-            <GuideCard key={g.id} guide={g} onDelete={() => setConfirmDelete(g)} />
+            <GuideCard
+              key={g.id}
+              guide={g}
+              onDelete={() => setConfirmDelete(g)}
+              onToggleComplete={() =>
+                updateGuide(g.id, {
+                  status: g.status === 'completed' ? 'planning' : 'completed',
+                })
+              }
+            />
           ))}
           <button
             className="btn-ghost"

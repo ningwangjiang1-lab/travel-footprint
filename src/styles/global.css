@@ -274,6 +274,9 @@ select {
   font-size: 11.5px;
 }
 .guide-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 14px;
 }
 .guide-body h3 {
@@ -287,6 +290,32 @@ select {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+.guide-info {
+  flex: 1;
+  min-width: 0;
+}
+.complete-check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ink-3);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+.complete-check.checked {
+  background: var(--brown);
+  border-color: var(--brown);
 }
 /* 左滑删除 */
 .swipe-wrap {
