@@ -10,8 +10,8 @@ import BillRow from '../components/bill/BillRow'
 import Filters from '../components/bill/Filters'
 import { useStore } from '../store/useStore'
 import { aggregateExpense, CATEGORY_META } from '../lib/expense'
-import { formatMoney, toISODate } from '../lib/format'
-import type { ExpenseCategory } from '../types'
+import { formatMoney, formatDateCn, toISODate } from '../lib/format'
+import type { Expense, ExpenseCategory } from '../types'
 
 /** 单个攻略的账单页：记账优先，汇总与可视化放最下面 */
 export default function GuideBillPage() {
@@ -60,6 +60,21 @@ export default function GuideBillPage() {
   }
 
   const filtered = filter === 'all' ? guideExpenses : guideExpenses.filter((e) => e.category === filter)
+  // 按日期分组（升序）：同一天内保持录入顺序，并计算当日小计
+  const grouped = useMemo(() => {
+    const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date))
+    const map = new Map<string, Expense[]>()
+    for (const e of sorted) {
+      const arr = map.get(e.date)
+      if (arr) arr.push(e)
+      else map.set(e.date, [e])
+    }
+    return [...map.entries()].map(([date, list]) => ({
+      date,
+      list,
+      total: list.reduce((s, e) => s + e.amount, 0),
+    }))
+  }, [filtered])
   const days = guide.days.length
   const summary = aggregateExpense(guideExpenses, { days })
 
@@ -135,8 +150,16 @@ export default function GuideBillPage() {
         {filtered.length === 0 ? (
           <div className="empty-day">暂无支出记录。</div>
         ) : (
-          filtered.map((e) => (
-            <BillRow key={e.id} expense={e} onDelete={() => removeExpense(e.id)} />
+          grouped.map(({ date, list, total }) => (
+            <div key={date}>
+              <div className="bill-day-head">
+                <span>{formatDateCn(date)}</span>
+                <span className="bill-day-total">{formatMoney(total)}</span>
+              </div>
+              {list.map((e) => (
+                <BillRow key={e.id} expense={e} onDelete={() => removeExpense(e.id)} />
+              ))}
+            </div>
           ))
         )}
       </div>

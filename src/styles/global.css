@@ -1031,6 +1031,21 @@ body.dark .pin .nm {
   padding: 2px;
   flex-shrink: 0;
 }
+.bill-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.bill-day-head .bill-day-total {
+  color: var(--brown);
+  font-weight: 700;
+}
 
 /* ============================================================
    弹窗（新建攻略 / 添加条目表单）
