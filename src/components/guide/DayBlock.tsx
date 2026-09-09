@@ -10,12 +10,18 @@ interface SortableItemRowProps {
   item: ItemModel
   seq?: number
   dayNumber: number
+  /** 是否处于编辑模式（仅编辑模式下显示拖拽手柄、单击可编辑） */
   editing: boolean
-  onToggleCheck: () => void
+  /** 编辑模式下单击条目 */
+  onClickEdit?: () => void
+  /** 非编辑模式下双击条目 */
+  onDoubleClickEdit?: () => void
+  /** 编辑模式下删除条目 */
+  onDelete?: () => void
 }
 
 /** 可拖拽排序的条目行 */
-function SortableItemRow({ item, seq, dayNumber, editing, onToggleCheck }: SortableItemRowProps) {
+function SortableItemRow({ item, seq, dayNumber, editing, onClickEdit, onDoubleClickEdit, onDelete }: SortableItemRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: { type: 'item', dayNumber },
@@ -29,8 +35,10 @@ function SortableItemRow({ item, seq, dayNumber, editing, onToggleCheck }: Sorta
       <Item
         item={item}
         seq={seq}
-        onToggleCheck={onToggleCheck}
         handleProps={editing ? { ...attributes, ...listeners } : undefined}
+        onClick={editing ? onClickEdit : undefined}
+        onDoubleClick={editing ? undefined : onDoubleClickEdit}
+        onDelete={editing ? onDelete : undefined}
       />
     </div>
   )
@@ -40,10 +48,11 @@ interface DayBlockProps {
   day: Day
   collapsed: boolean
   onToggleCollapse: () => void
-  onToggleCheck: (itemId: string) => void
   onAddItem: () => void
   onDeleteDay: () => void
   onEditRoute: (route: string) => void
+  onEditItem: (item: ItemModel) => void
+  onDeleteItem: (item: ItemModel) => void
 }
 
 /** 天块时间轴（UI 规范 §7.5） */
@@ -51,10 +60,11 @@ export default function DayBlock({
   day,
   collapsed,
   onToggleCollapse,
-  onToggleCheck,
   onAddItem,
   onDeleteDay,
   onEditRoute,
+  onEditItem,
+  onDeleteItem,
 }: DayBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: day.id,
@@ -175,7 +185,12 @@ export default function DayBlock({
                     seq={item.type === 'location' ? locSeq : undefined}
                     dayNumber={day.dayNumber}
                     editing={editing}
-                    onToggleCheck={() => onToggleCheck(item.id)}
+                    onClickEdit={() => onEditItem(item)}
+                    onDoubleClickEdit={() => {
+                      setEditing(true)
+                      onEditItem(item)
+                    }}
+                    onDelete={() => onDeleteItem(item)}
                   />
                 )
               })}

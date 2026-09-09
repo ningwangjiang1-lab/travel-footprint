@@ -65,9 +65,15 @@ export function weekdayCn(dateStr: string): string {
   return WEEKDAYS[parseDate(dateStr).getDay()]
 }
 
-/** 金额 '¥8,420' */
+/** 金额 '¥8,420.00'（保留两位小数） */
 export function formatMoney(n: number): string {
-  return '¥' + Math.round(n).toLocaleString('en-US')
+  return (
+    '¥' +
+    n.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  )
 }
 
 /** 金额（紧凑）'¥8.4k' / '¥1.2w' */

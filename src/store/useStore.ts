@@ -56,7 +56,6 @@ interface StoreState {
   ) => void
   removeItem: (guideId: string, dayNumber: number, itemId: string) => void
   reorderItem: (guideId: string, dayNumber: number, from: number, to: number) => void
-  toggleItemChecked: (guideId: string, dayNumber: number, itemId: string) => void
 
   // Expense
   addExpense: (input: Omit<Expense, 'id'>) => void
@@ -242,21 +241,9 @@ export const useStore = create<StoreState>()(
           ),
         })),
 
-      toggleItemChecked: (guideId, dayNumber, itemId) =>
-        set((s) => ({
-          guides: mapGuide(s.guides, guideId, (g) =>
-            mapDay(g, dayNumber, (d) => ({
-              ...d,
-              items: d.items.map((it) =>
-                it.id === itemId ? { ...it, checked: !it.checked } : it,
-              ),
-            })),
-          ),
-        })),
-
       addExpense: (input) =>
         set((s) => ({
-          expenses: [{ ...input, id: genId() }, ...s.expenses],
+          expenses: [...s.expenses, { ...input, id: genId() }],
         })),
 
       removeExpense: (id) =>

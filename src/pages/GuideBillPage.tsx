@@ -33,12 +33,12 @@ export default function GuideBillPage() {
   const [note, setNote] = useState('')
   // 默认日期：上一次记账使用的日期，否则回到行程第一天
   const [date, setDate] = useState<string>(
-    () => guideExpenses[0]?.date || guide?.startDate || toISODate(new Date()),
+    () => guideExpenses[guideExpenses.length - 1]?.date || guide?.startDate || toISODate(new Date()),
   )
 
   // 切换攻略时重置日期，避免沿用上一个攻略的日期
   useEffect(() => {
-    setDate(guideExpenses[0]?.date || guide?.startDate || toISODate(new Date()))
+    setDate(guideExpenses[guideExpenses.length - 1]?.date || guide?.startDate || toISODate(new Date()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guide?.id])
 
@@ -92,6 +92,8 @@ export default function GuideBillPage() {
             <input
               type="number"
               inputMode="decimal"
+              step="0.01"
+              min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"

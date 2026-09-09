@@ -19,7 +19,7 @@ import { useStore } from '../store/useStore'
 import { useUi } from '../store/useUi'
 import { lookupCity } from '../lib/cities'
 import { exportNodeToPng } from '../lib/share'
-import type { ItemType } from '../types'
+import type { Item, ItemType } from '../types'
 
 interface DragData {
   type?: 'day' | 'item'
@@ -33,18 +33,72 @@ const TYPE_LABEL: Record<ItemType, string> = {
   hotel: '住宿',
 }
 
-const TRANSPORT_EMOJIS = ['🚞', '🚇', '🚌', '🚗', '🚕', '🚶🏻‍♂️', '🚲']
+const TYPE_ICON: Record<ItemType, string> = {
+  transport: '🚞',
+  location: '📍',
+  food: '🍜',
+  hotel: '🏨',
+}
 
-const FIELD_PLACEHOLDER: Record<ItemType, string> = {
-  transport: '如：Z105 郑州站 01:27 – 14:57 兰州站',
-  location: '如：中山桥',
-  food: '如：马子禄牛肉面',
-  hotel: '如：兰州宜佳酒店',
+// 交通方式：火车/高铁、飞机需按字段依次填写，其余一行描述即可
+const TRANSPORTS: { emoji: string; mode: 'train' | 'plane' | ''; label: string }[] = [
+  { emoji: '🚞', mode: 'train', label: '火车/高铁' },
+  { emoji: '✈️', mode: 'plane', label: '飞机' },
+  { emoji: '🚇', mode: '', label: '地铁' },
+  { emoji: '🚌', mode: '', label: '大巴' },
+  { emoji: '🚗', mode: '', label: '自驾' },
+  { emoji: '🚕', mode: '', label: '打车' },
+  { emoji: '🚶🏻‍♂️', mode: '', label: '步行' },
+  { emoji: '🚲', mode: '', label: '骑行' },
+]
+
+type StructKey = 'no' | 'from' | 'fromTime' | 'toTime' | 'to'
+
+// 结构化交通（火车/飞机）的字段顺序与标签，填写后拼成一行
+const STRUCTURED_FIELDS: Record<'train' | 'plane', { key: StructKey; label: string }[]> = {
+  train: [
+    { key: 'no', label: '车次' },
+    { key: 'from', label: '出发站' },
+    { key: 'fromTime', label: '发车时刻' },
+    { key: 'toTime', label: '到达时刻' },
+    { key: 'to', label: '到达站' },
+  ],
+  plane: [
+    { key: 'no', label: '航班号' },
+    { key: 'from', label: '出发机场' },
+    { key: 'fromTime', label: '出发时间' },
+    { key: 'toTime', label: '到达时间' },
+    { key: 'to', label: '到达机场' },
+  ],
+}
+
+/** 从拼接后的正文反推出结构化字段（兼容旧数据，无 struct 元数据时使用） */
+function parseStructuredContent(content: string): {
+  no: string
+  from: string
+  fromTime: string
+  toTime: string
+  to: string
+} | null {
+  const [left, right] = content.split(' – ')
+  if (!left || !right) return null
+  const l = left.trim().split(/\s+/)
+  const r = right.trim().split(/\s+/)
+  if (l.length < 3 || r.length < 2) return null
+  return {
+    no: l[0],
+    from: l.slice(1, -1).join(' '),
+    fromTime: l[l.length - 1],
+    toTime: r[0],
+    to: r.slice(1).join(' '),
+  }
 }
 
 interface ItemFormState {
   dayNumber: number
   type: ItemType
+  /** 编辑已有条目时传入其 id；为空表示新增 */
+  itemId?: string
 }
 
 /** 攻略编辑页（开发计划 Step 4–5、8） */
@@ -56,11 +110,13 @@ export default function EditorPage() {
     addDay,
     removeDay,
     updateDay,
-    toggleItemChecked,
     addItem,
+    updateItem,
+    removeItem,
     moveDay,
     reorderItem,
     upsertLocation,
+    removeLocationByName,
   } = useStore.getState()
   const openNewGuide = useUi((s) => s.openNewGuide)
 
@@ -68,11 +124,27 @@ export default function EditorPage() {
   const [sheetDay, setSheetDay] = useState<number | null>(null)
   const [form, setForm] = useState<ItemFormState | null>(null)
   const [deleteDay, setDeleteDay] = useState<number | null>(null)
+  const [deleteItem, setDeleteItem] = useState<{ dayNumber: number; item: Item } | null>(null)
 
   // 条目表单字段
   const [content, setContent] = useState('')
   const [note, setNote] = useState('')
   const [transportEmoji, setTransportEmoji] = useState('🚞')
+  // 结构化交通（火车/飞机）的分段字段
+  const [struct, setStruct] = useState<Record<StructKey, string>>({
+    no: '',
+    from: '',
+    fromTime: '',
+    toTime: '',
+    to: '',
+  })
+
+  const selectedTransport = TRANSPORTS.find((t) => t.emoji === transportEmoji)
+  const structuredMode =
+    form?.type === 'transport' && selectedTransport?.mode ? selectedTransport.mode : null
+  const canSubmit = structuredMode
+    ? Object.values(struct).every((v) => v.trim() !== '')
+    : content.trim().length > 0
 
   // 分享图
   const shareRef = useRef<HTMLDivElement>(null)
@@ -156,20 +228,69 @@ export default function EditorPage() {
     setContent('')
     setNote('')
     setTransportEmoji('🚞')
+    setStruct({ no: '', from: '', fromTime: '', toTime: '', to: '' })
+  }
+
+  const openEditForm = (dayNumber: number, item: Item) => {
+    setForm({ dayNumber, type: item.type, itemId: item.id })
+    setSheetDay(null)
+    setContent(item.content || '')
+    setNote(item.note || '')
+    setTransportEmoji(item.metadata?.transportEmoji || '🚞')
+    const s = item.metadata?.struct ?? parseStructuredContent(item.content || '')
+    setStruct({
+      no: s?.no || '',
+      from: s?.from || '',
+      fromTime: s?.fromTime || '',
+      toTime: s?.toTime || '',
+      to: s?.to || '',
+    })
   }
 
   const submitForm = () => {
-    if (!form || !content.trim()) return
-    const metadata =
-      form.type === 'transport' ? { transportEmoji } : { city: inferCity(form.dayNumber) }
-    addItem(guide.id, form.dayNumber, {
-      type: form.type,
-      content: content.trim(),
+    if (!form) return
+    let finalContent = content.trim()
+    let structMeta: Item['metadata']['struct'] = undefined
+    if (structuredMode) {
+      // 火车/飞机：按字段顺序拼成一行「车次 出发站 发车时刻 – 到达时刻 到达站」
+      const { no, from, fromTime, toTime, to } = struct
+      if (![no, from, fromTime, toTime, to].every((v) => v.trim() !== '')) return
+      finalContent = `${no.trim()} ${from.trim()} ${fromTime.trim()} – ${toTime.trim()} ${to.trim()}`
+      structMeta = {
+        no: no.trim(),
+        from: from.trim(),
+        fromTime: fromTime.trim(),
+        toTime: toTime.trim(),
+        to: to.trim(),
+      }
+    }
+    if (!finalContent) return
+    const metadata: Item['metadata'] =
+      form.type === 'transport'
+        ? { transportEmoji, ...(structMeta ? { struct: structMeta } : {}) }
+        : { city: inferCity(form.dayNumber) }
+    const patch = {
+      content: finalContent,
       note: note.trim() || undefined,
       metadata,
-    })
-    if (form.type === 'location') {
-      upsertLocation({ name: content.trim(), city: inferCity(form.dayNumber) })
+    }
+
+    if (form.itemId) {
+      // 二次编辑：更新已有条目
+      updateItem(guide.id, form.dayNumber, form.itemId, patch)
+      if (form.type === 'location') {
+        const day = guide.days.find((d) => d.dayNumber === form.dayNumber)
+        const old = day?.items.find((i) => i.id === form.itemId)
+        if (old && old.content !== finalContent) {
+          removeLocationByName(old.content, inferCity(form.dayNumber))
+        }
+        upsertLocation({ name: finalContent, city: inferCity(form.dayNumber) })
+      }
+    } else {
+      addItem(guide.id, form.dayNumber, { type: form.type, ...patch })
+      if (form.type === 'location') {
+        upsertLocation({ name: finalContent, city: inferCity(form.dayNumber) })
+      }
     }
     setForm(null)
   }
@@ -199,10 +320,11 @@ export default function EditorPage() {
               day={day}
               collapsed={collapsed.has(day.dayNumber)}
               onToggleCollapse={() => toggleCollapse(day.dayNumber)}
-              onToggleCheck={(itemId) => toggleItemChecked(guide.id, day.dayNumber, itemId)}
               onAddItem={() => setSheetDay(day.dayNumber)}
               onDeleteDay={() => handleDeleteDay(day.dayNumber)}
               onEditRoute={(route) => updateDay(guide.id, day.dayNumber, { route })}
+              onEditItem={(item) => openEditForm(day.dayNumber, item)}
+              onDeleteItem={(item) => setDeleteItem({ dayNumber: day.dayNumber, item })}
             />
           ))}
         </SortableContext>
@@ -225,9 +347,7 @@ export default function EditorPage() {
         <div className="sheet-grid">
           {(Object.keys(TYPE_LABEL) as ItemType[]).map((type) => (
             <button key={type} onClick={() => sheetDay != null && openForm(sheetDay, type)}>
-              <span className="e">
-                {type === 'transport' ? '🚞' : type === 'location' ? '📍' : type === 'food' ? '🍜' : '🏨'}
-              </span>
+              <span className="e">{TYPE_ICON[type]}</span>
               {TYPE_LABEL[type]}
             </button>
           ))}
@@ -238,49 +358,71 @@ export default function EditorPage() {
       {form && (
         <div className="modal-mask" onClick={() => setForm(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>添加{TYPE_LABEL[form.type]}</h3>
+            <h3>
+              {form.type === 'transport' ? transportEmoji : TYPE_ICON[form.type]}{' '}
+              {TYPE_LABEL[form.type]}
+            </h3>
             {form.type === 'transport' && (
               <div className="field">
                 <label>交通方式</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {TRANSPORT_EMOJIS.map((em) => (
+                <div className="transport-grid">
+                  {TRANSPORTS.map((t) => (
                     <button
-                      key={em}
-                      onClick={() => setTransportEmoji(em)}
-                      style={{
-                        width: 34,
-                        height: 34,
-                        fontSize: 18,
-                        borderRadius: 9,
-                        border: transportEmoji === em ? '2px solid var(--brown)' : '1px solid var(--line)',
-                        background: 'var(--cream)',
-                      }}
+                      key={t.emoji}
+                      type="button"
+                      className={transportEmoji === t.emoji ? 'selected' : ''}
+                      onClick={() => setTransportEmoji(t.emoji)}
+                      aria-label={t.label}
                     >
-                      {em}
+                      {t.emoji}
                     </button>
                   ))}
                 </div>
               </div>
             )}
-            <div className="field">
-              <label>{form.type === 'hotel' ? '酒店名' : form.type === 'food' ? '餐厅 / 小吃' : form.type === 'location' ? '景点名称' : '描述'}</label>
-              <input
-                autoFocus
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder={FIELD_PLACEHOLDER[form.type]}
-              />
-            </div>
+
+            {structuredMode ? (
+              <>
+                {STRUCTURED_FIELDS[structuredMode].map((f, i) => (
+                  <div className="field" key={f.key}>
+                    <label>{f.label}</label>
+                    <input
+                      autoFocus={i === 0}
+                      value={struct[f.key]}
+                      onChange={(e) => setStruct((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="field">
+                <label>
+                  {form.type === 'hotel'
+                    ? '酒店名'
+                    : form.type === 'food'
+                      ? '餐厅 / 小吃'
+                      : form.type === 'location'
+                        ? '景点名称'
+                        : '描述'}
+                </label>
+                <input autoFocus value={content} onChange={(e) => setContent(e.target.value)} />
+              </div>
+            )}
+
             <div className="field">
               <label>备注（可选）</label>
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="费用、说明等" />
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={structuredMode ? '可填写座位号' : undefined}
+              />
             </div>
             <div className="modal-actions">
               <button className="btn-ghost" onClick={() => setForm(null)}>
                 取消
               </button>
-              <button className="btn-primary" onClick={submitForm} disabled={!content.trim()}>
-                添加
+              <button className="btn-primary" onClick={submitForm} disabled={!canSubmit}>
+                {form.itemId ? '保存' : '添加'}
               </button>
             </div>
           </div>
@@ -305,6 +447,33 @@ export default function EditorPage() {
                 onClick={() => {
                   removeDay(guide.id, deleteDay)
                   setDeleteDay(null)
+                }}
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除某条条目确认 */}
+      {deleteItem !== null && (
+        <div className="modal-mask" onClick={() => setDeleteItem(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>删除这条条目？</h3>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>
+              「{deleteItem.item.content}」删除后无法撤销。
+            </p>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setDeleteItem(null)}>
+                取消
+              </button>
+              <button
+                className="btn-primary"
+                style={{ background: 'var(--c-ticket)' }}
+                onClick={() => {
+                  removeItem(guide.id, deleteItem.dayNumber, deleteItem.item.id)
+                  setDeleteItem(null)
                 }}
               >
                 删除

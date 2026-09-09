@@ -1,10 +1,9 @@
 import { forwardRef } from 'react'
 import type { Guide, Item } from '../../types'
-import { formatDateCn, formatFullDate } from '../../lib/format'
+import { formatDateCn, formatFullDate, daysBetween } from '../../lib/format'
 
 function itemIcon(item: Item): string {
   if (item.type === 'transport') return item.metadata?.transportEmoji || '🚞'
-  if (item.type === 'location') return '📍'
   if (item.type === 'food') return '🍜'
   return '🏨'
 }
@@ -19,6 +18,7 @@ interface ShareImageProps {
  * 由 lib/share.ts 的 html-to-image 导出为 PNG。
  */
 const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) => {
+  const days = daysBetween(guide.startDate, guide.endDate)
   return (
     <div
       ref={ref}
@@ -30,55 +30,84 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
         fontFamily: 'system-ui, "PingFang SC", "Microsoft YaHei", sans-serif',
       }}
     >
-      {/* 封面 */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg,#E88D4B,#8B5E3C)',
-          borderRadius: 18,
-          padding: 22,
-          color: '#fff',
-        }}
-      >
-        <div style={{ fontSize: 40, lineHeight: 1 }}>{guide.coverImage || '🏔️'}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, marginTop: 12 }}>{guide.title}</div>
-        <div style={{ fontSize: 12, opacity: 0.92, marginTop: 6 }}>
-          {formatFullDate(guide.startDate)} – {formatFullDate(guide.endDate)}
-          {guide.destination ? ` · ${guide.destination}` : ''}
+      {/* 顶部：标题 + 日期（天数），普通背景，无图标 */}
+      <div>
+        <div style={{ fontSize: 20, fontWeight: 800 }}>{guide.title}</div>
+        <div style={{ fontSize: 12, color: '#8A7A68', marginTop: 6 }}>
+          {formatFullDate(guide.startDate)} – {formatFullDate(guide.endDate)}（{days}天）
         </div>
       </div>
 
       {/* 时间轴摘要 */}
       <div style={{ marginTop: 18 }}>
-        {guide.days.map((day) => (
-          <div key={day.id} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>
-              {formatDateCn(day.date)}
-              {day.route ? ` ｜ ${day.route}` : ''}
+        {guide.days.map((day) => {
+          let locSeq = 0
+          return (
+            <div key={day.id} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>
+                {formatDateCn(day.date)}
+                {day.route ? ` ｜ ${day.route}` : ''}
+              </div>
+              <div style={{ marginTop: 5 }}>
+                {day.items.map((item) => {
+                  if (item.type === 'location') locSeq += 1
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        fontSize: 12,
+                        color: '#8A7A68',
+                        padding: '2px 0',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 20,
+                          flexShrink: 0,
+                          display: 'flex',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {item.type === 'location' ? (
+                          <span
+                            style={{
+                              width: 13,
+                              height: 13,
+                              marginTop: 2,
+                              borderRadius: '50%',
+                              border: '1px solid #C4643F',
+                              color: '#C4643F',
+                              fontSize: 9,
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: 1,
+                              transform: 'translate(-1px, 1px)',
+                            }}
+                          >
+                            <span style={{ transform: 'translateX(0.5px)' }}>
+                              {locSeq}
+                            </span>
+                          </span>
+                        ) : (
+                          <span style={{ lineHeight: 1.5 }}>{itemIcon(item)}</span>
+                        )}
+                      </span>
+                      <span style={{ lineHeight: 1.5 }}>
+                        {item.content}
+                        {item.note ? `（${item.note}）` : ''}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <div style={{ marginTop: 5 }}>
-              {day.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    gap: 8,
-                    fontSize: 12,
-                    color: '#8A7A68',
-                    padding: '2px 0',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <span style={{ flexShrink: 0 }}>{itemIcon(item)}</span>
-                  <span>
-                    {item.checked ? '✓ ' : ''}
-                    {item.content}
-                    {item.note ? `（${item.note}）` : ''}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div
@@ -90,7 +119,7 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
           letterSpacing: 1,
         }}
       >
-        旅行足迹 · 我的旅行手账
+        旅行足迹·留存旅途的点滴
       </div>
     </div>
   )

@@ -25,6 +25,8 @@ export interface ItemMetadata {
   transportMode?: 'train' | 'metro' | 'bus' | 'car' | 'taxi' | 'walk' | 'bike'
   /** 车次 / 线路号 */
   trainNo?: string
+  /** 结构化交通（火车/飞机）的分段字段，用于二次编辑时回填表单 */
+  struct?: { no: string; from: string; fromTime: string; toTime: string; to: string }
   /** 出发地 / 站 */
   from?: string
   /** 到达地 / 站 */
