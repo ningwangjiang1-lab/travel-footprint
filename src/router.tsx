@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import HomePage from './pages/HomePage'
 import MapPage from './pages/MapPage'
+import SelectCitiesPage from './pages/SelectCitiesPage'
 import EditorPage from './pages/EditorPage'
 import GuideBillPage from './pages/GuideBillPage'
 
@@ -13,6 +14,7 @@ export default function AppRoutes() {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<HomePage />} />
         <Route path="/map" element={<MapPage />} />
+        <Route path="/map/select" element={<SelectCitiesPage />} />
         <Route path="/guide/:id/bill" element={<GuideBillPage />} />
         <Route path="/guide/:id" element={<EditorPage />} />
         <Route path="*" element={<HomePage />} />

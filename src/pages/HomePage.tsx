@@ -5,21 +5,20 @@ import EmptyState from '../components/ui/EmptyState'
 import GuideCard from '../components/guide/GuideCard'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/useUi'
-import { aggregateLocations } from '../lib/locations'
 import { daysBetween } from '../lib/format'
 import type { Guide } from '../types'
 
 /** 首页（开发计划 Step 3）：KPI 概览 + 攻略列表 + 空状态 */
 export default function HomePage() {
   const guides = useStore((s) => s.guides)
-  const locations = useStore((s) => s.locations)
   const removeGuide = useStore((s) => s.removeGuide)
   const updateGuide = useStore((s) => s.updateGuide)
+  const litCities = useStore((s) => s.litCities)
   const openNewGuide = useUi((s) => s.openNewGuide)
 
   const [confirmDelete, setConfirmDelete] = useState<Guide | null>(null)
 
-  const cityCount = aggregateLocations(locations).cities
+  const cityCount = litCities.length
   // 旅行次数 / 旅行天数：仅统计已完成的旅程
   const completedGuides = guides.filter((g) => g.status === 'completed')
   const tripCount = completedGuides.length
@@ -33,13 +32,9 @@ export default function HomePage() {
   return (
     <Page>
       <div className="kpi-row">
-        <KpiCard
-          label="点亮城市"
-          value={cityCount}
-          hint={locations.length > 0 ? `共 ${locations.length} 个地点` : '待解锁'}
-        />
-        <KpiCard label="旅行次数" value={tripCount} hint="已完成" />
-        <KpiCard label="旅行天数" value={totalDays} hint="累计" />
+        <KpiCard label="点亮城市" value={cityCount} />
+        <KpiCard label="旅行次数" value={tripCount} />
+        <KpiCard label="旅行天数" value={totalDays} />
       </div>
 
       <div className="section-title">我的攻略</div>

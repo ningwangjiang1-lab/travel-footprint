@@ -15,7 +15,7 @@ export default function TabBar() {
 
   const tabs: TabDef[] = [
     { key: 'home', icon: '🧭', label: '旅行攻略', to: '/', match: (p) => p === '/' },
-    { key: 'map', icon: '🗺️', label: '点亮地图', to: '/map', match: (p) => p.startsWith('/map') },
+    { key: 'map', icon: '🗺️', label: '足迹地图', to: '/map', match: (p) => p.startsWith('/map') },
   ]
 
   return (

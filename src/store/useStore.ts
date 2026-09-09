@@ -30,6 +30,8 @@ interface StoreState {
   guides: Guide[]
   expenses: Expense[]
   locations: Location[]
+  /** 足迹地图：已点亮的地级行政区（城市/地区）名称集合 */
+  litCities: string[]
 
   // Guide
   addGuide: (input: NewGuideInput) => Guide
@@ -60,6 +62,9 @@ interface StoreState {
   // Expense
   addExpense: (input: Omit<Expense, 'id'>) => void
   removeExpense: (id: string) => void
+
+  // 足迹地图
+  setLitCities: (cities: string[]) => void
 
   // Location
   upsertLocation: (input: {
@@ -102,6 +107,7 @@ export const useStore = create<StoreState>()(
       guides: [],
       expenses: [],
       locations: [],
+      litCities: [],
 
       addGuide: (input) => {
         const guide: Guide = {
@@ -249,6 +255,8 @@ export const useStore = create<StoreState>()(
       removeExpense: (id) =>
         set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) })),
 
+      setLitCities: (cities) => set({ litCities: cities }),
+
       upsertLocation: (input) => {
         const name = input.name.trim()
         if (!name) return
@@ -381,6 +389,7 @@ export const useStore = create<StoreState>()(
         guides: s.guides,
         expenses: s.expenses,
         locations: s.locations,
+        litCities: s.litCities,
       }),
     },
   ),
