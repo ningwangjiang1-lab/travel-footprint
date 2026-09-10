@@ -111,10 +111,10 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
                               alignItems: 'center',
                               justifyContent: 'center',
                               lineHeight: 1,
-                              transform: 'translate(-1px, 1px)',
+                              transform: 'translate(-1px, 0.5px)',
                             }}
                           >
-                            <span style={{ transform: 'translateX(0.5px)' }}>
+                            <span style={{ transform: 'translateX(0.5px) translateY(0.5px)' }}>
                               {info?.seq ?? 0}
                             </span>
                           </span>
