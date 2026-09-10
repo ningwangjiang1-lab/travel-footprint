@@ -69,6 +69,28 @@ export default function AppBar() {
         >
           {dark ? '☀️' : '🌙'}
         </button>
+        {!inGuide && (
+          <button
+            onClick={() => navigate('/settings')}
+            aria-label="设置"
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 999,
+              border: '1px solid var(--line)',
+              background: 'var(--card)',
+              color: 'var(--ink)',
+              fontSize: 15,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+            }}
+          >
+            ⚙️
+          </button>
+        )}
       </div>
     </div>
   )

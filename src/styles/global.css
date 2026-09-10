@@ -1200,7 +1200,7 @@ body.dark .pin .nm {
   position: fixed;
   left: -9999px;
   top: 0;
-  width: 390px;
+  width: 680px;
   pointer-events: none;
 }
 
@@ -1421,6 +1421,30 @@ body.dark .pin .nm {
   border-top: 1px solid var(--line);
 }
 
+/* ============================================================
+   PWA 移动端全屏（真机 / 窄屏）
+   ============================================================ */
+@media (max-width: 480px) {
+  .stage {
+    padding: 0;
+    background: var(--cream);
+  }
+  .phone {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .statusbar {
+    display: none;
+  }
+  .appbar {
+    padding-top: calc(env(safe-area-inset-top) + 6px);
+  }
+}
+
 /* 减弱动态效果（UI 规范 §10.5） */
 @media (prefers-reduced-motion: reduce) {
   .pin.lit .spot::after,
@@ -1433,4 +1457,75 @@ body.dark .pin .nm {
   .screen {
     scroll-behavior: auto;
   }
+}
+
+/* ============================================================
+   设置页（数据备份 / 恢复 / 清空）
+   ============================================================ */
+.settings-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.settings-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.settings-danger {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--c-ticket);
+  color: var(--c-ticket);
+}
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.settings-about-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.settings-about-row b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.settings-note {
+  flex: 1;
+  text-align: right;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.settings-toast {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.settings-toast.ok {
+  background: color-mix(in srgb, var(--olive) 16%, var(--card));
+  color: var(--olive);
+  border: 1px solid color-mix(in srgb, var(--olive) 32%, transparent);
+}
+.settings-toast.err {
+  background: color-mix(in srgb, var(--c-ticket) 12%, var(--card));
+  color: var(--c-ticket);
+  border: 1px solid color-mix(in srgb, var(--c-ticket) 32%, transparent);
 }

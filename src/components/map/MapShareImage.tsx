@@ -6,7 +6,7 @@ import { lightColor } from '../../lib/mapColor'
 let geoPromise: Promise<any> | null = null
 function loadChinaGeo(): Promise<any> {
   if (!geoPromise) {
-    geoPromise = fetch('/geo/china.json').then((r) => r.json())
+    geoPromise = fetch(`${import.meta.env.BASE_URL}geo/china.json`).then((r) => r.json())
   }
   return geoPromise
 }
@@ -69,26 +69,26 @@ const MapShareImage = forwardRef<HTMLDivElement, MapShareImageProps>(({ litCitie
     <div
       ref={ref}
       style={{
-        width: 390,
+        width: 680,
         background: '#F7F2EA',
         color: '#3A2C1F',
-        padding: 20,
+        padding: 24,
         fontFamily: 'system-ui, "PingFang SC", "Microsoft YaHei", sans-serif',
       }}
     >
       <div>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>我的足迹地图</div>
-        <div style={{ fontSize: 12, color: '#8A7A68', marginTop: 6 }}>
+        <div style={{ fontSize: 26, fontWeight: 800 }}>我的足迹地图</div>
+        <div style={{ fontSize: 14, color: '#8A7A68', marginTop: 8 }}>
           已点亮 {litCities.length} 座城市 · {litProvinces} 个省份
         </div>
       </div>
 
-      <div ref={mapRef} style={{ width: '100%', height: 320, marginTop: 16 }} />
+      <div ref={mapRef} style={{ width: '100%', height: 380, marginTop: 20 }} />
 
       <div
         style={{
-          marginTop: 14,
-          fontSize: 11,
+          marginTop: 20,
+          fontSize: 13,
           color: '#B4A893',
           textAlign: 'center',
           letterSpacing: 1,

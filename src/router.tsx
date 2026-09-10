@@ -5,6 +5,7 @@ import MapPage from './pages/MapPage'
 import SelectCitiesPage from './pages/SelectCitiesPage'
 import EditorPage from './pages/EditorPage'
 import GuideBillPage from './pages/GuideBillPage'
+import SettingsPage from './pages/SettingsPage'
 
 /** 路由（开发计划 Step 2）：旅行攻略 / 点亮地图 / 攻略详情 / 攻略账单 */
 export default function AppRoutes() {
@@ -15,6 +16,7 @@ export default function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/map/select" element={<SelectCitiesPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/guide/:id/bill" element={<GuideBillPage />} />
         <Route path="/guide/:id" element={<EditorPage />} />
         <Route path="*" element={<HomePage />} />

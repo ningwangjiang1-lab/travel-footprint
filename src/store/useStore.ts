@@ -66,6 +66,15 @@ interface StoreState {
   // 足迹地图
   setLitCities: (cities: string[]) => void
 
+  // 数据备份：整体导入 / 清空全部
+  importData: (data: {
+    guides: Guide[]
+    expenses: Expense[]
+    locations: Location[]
+    litCities: string[]
+  }) => void
+  clearAll: () => void
+
   // Location
   upsertLocation: (input: {
     name: string
@@ -256,6 +265,16 @@ export const useStore = create<StoreState>()(
         set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) })),
 
       setLitCities: (cities) => set({ litCities: cities }),
+
+      importData: (data) =>
+        set({
+          guides: data.guides,
+          expenses: data.expenses,
+          locations: data.locations,
+          litCities: data.litCities,
+        }),
+
+      clearAll: () => set({ guides: [], expenses: [], locations: [], litCities: [] }),
 
       upsertLocation: (input) => {
         const name = input.name.trim()

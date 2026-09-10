@@ -1,9 +1,29 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg'],
+      manifest: {
+        name: '旅行足迹',
+        short_name: '旅行足迹',
+        description: '记录旅程、账单与足迹的旅行日记',
+        lang: 'zh-CN',
+        theme_color: '#8B5E3C',
+        background_color: '#F7F2EA',
+        display: 'standalone',
+        start_url: './',
+        icons: [
+          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
+      },
+    }),
+  ],
   // 相对路径构建，便于部署到任意静态托管（Vercel / Netlify / GitHub Pages）
   base: './',
   build: {

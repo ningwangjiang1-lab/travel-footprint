@@ -6,7 +6,7 @@ import { lightColor } from '../../lib/mapColor'
 let geoPromise: Promise<any> | null = null
 function loadChinaGeo(): Promise<any> {
   if (!geoPromise) {
-    geoPromise = fetch('/geo/china.json').then((r) => r.json())
+    geoPromise = fetch(`${import.meta.env.BASE_URL}geo/china.json`).then((r) => r.json())
   }
   return geoPromise
 }
@@ -19,8 +19,7 @@ function buildOption(lit: Set<string>): any {
       {
         type: 'map',
         map: 'china',
-        roam: true,
-        scaleLimit: { min: 0.6, max: 8 },
+        roam: false,
         zoom: 1.12,
         label: { show: false },
         itemStyle: {
