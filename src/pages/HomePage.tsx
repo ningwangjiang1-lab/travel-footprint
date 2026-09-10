@@ -42,8 +42,8 @@ export default function HomePage() {
       {guides.length === 0 ? (
         <EmptyState
           emoji="🧭"
-          title="你的下一段冒险，从这里开始"
-          desc="创建你的第一份旅行攻略，规划行程、记录足迹、点亮地图。"
+          title="你的下一段旅程，从这里开始"
+          desc="创建你的第一份旅行攻略，规划行程、记录足迹。"
           action={
             <button className="btn-primary" onClick={openNewGuide}>
               ＋ 新建攻略

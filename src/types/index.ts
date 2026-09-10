@@ -55,6 +55,8 @@ export interface Item {
   order: number
   checked?: boolean
   metadata: ItemMetadata
+  /** 小景点：指向所属大景点（location）条目的 id；大景点无此字段 */
+  parentId?: string
 }
 
 /** 每日行程 */

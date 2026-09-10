@@ -6,24 +6,37 @@ import { formatDateCn } from '../../lib/format'
 import Item from './Item'
 import QuickAddBar from './QuickAddBar'
 
-interface SortableItemRowProps {
-  item: ItemModel
-  seq?: number
+interface SortableBlockRowProps {
+  /** 块内条目：第一个为大景点，其后为其小景点 */
+  block: ItemModel[]
   dayNumber: number
   /** 是否处于编辑模式（仅编辑模式下显示拖拽手柄、单击可编辑） */
   editing: boolean
+  /** 条目 id → 序号信息（带圈数字 / 罗马数字） */
+  seqInfo: Map<string, { seq?: number; roman?: number }>
   /** 编辑模式下单击条目 */
-  onClickEdit?: () => void
+  onClickEdit: (item: ItemModel) => void
   /** 非编辑模式下双击条目 */
-  onDoubleClickEdit?: () => void
+  onDoubleClickEdit: (item: ItemModel) => void
   /** 编辑模式下删除条目 */
-  onDelete?: () => void
+  onDelete: (item: ItemModel) => void
+  /** 编辑模式下添加小景点（大景点） */
+  onAddSub?: () => void
 }
 
-/** 可拖拽排序的条目行 */
-function SortableItemRow({ item, seq, dayNumber, editing, onClickEdit, onDoubleClickEdit, onDelete }: SortableItemRowProps) {
+/** 可拖拽排序的块：大景点连同其小景点作为一个整体移动 */
+function SortableBlockRow({
+  block,
+  dayNumber,
+  editing,
+  seqInfo,
+  onClickEdit,
+  onDoubleClickEdit,
+  onDelete,
+  onAddSub,
+}: SortableBlockRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
+    id: block[0].id,
     data: { type: 'item', dayNumber },
   })
   const style = {
@@ -32,14 +45,24 @@ function SortableItemRow({ item, seq, dayNumber, editing, onClickEdit, onDoubleC
   }
   return (
     <div ref={setNodeRef} style={style} className={isDragging ? 'dragging' : ''}>
-      <Item
-        item={item}
-        seq={seq}
-        handleProps={editing ? { ...attributes, ...listeners } : undefined}
-        onClick={editing ? onClickEdit : undefined}
-        onDoubleClick={editing ? undefined : onDoubleClickEdit}
-        onDelete={editing ? onDelete : undefined}
-      />
+      {block.map((item) => {
+        const info = seqInfo.get(item.id)
+        const isParent = !item.parentId
+        return (
+          <Item
+            key={item.id}
+            item={item}
+            seq={info?.seq}
+            roman={info?.roman}
+            isSub={!isParent}
+            handleProps={editing && isParent ? { ...attributes, ...listeners } : undefined}
+            onClick={editing ? () => onClickEdit(item) : undefined}
+            onDoubleClick={editing ? undefined : () => onDoubleClickEdit(item)}
+            onDelete={editing ? () => onDelete(item) : undefined}
+            onAddSub={editing && isParent && item.type === 'location' ? onAddSub : undefined}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -53,6 +76,8 @@ interface DayBlockProps {
   onEditRoute: (route: string) => void
   onEditItem: (item: ItemModel) => void
   onDeleteItem: (item: ItemModel) => void
+  /** 在大景点下添加小景点 */
+  onAddSub: (parentId: string) => void
 }
 
 /** 天块时间轴（UI 规范 §7.5） */
@@ -65,6 +90,7 @@ export default function DayBlock({
   onEditRoute,
   onEditItem,
   onDeleteItem,
+  onAddSub,
 }: DayBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: day.id,
@@ -80,9 +106,33 @@ export default function DayBlock({
     transition,
   }
 
-  const itemIds = day.items.map((i) => i.id)
-  // 景点序号：当天内 location 条目按顺序自动编号
+  // 将条目按「大景点 + 其小景点」分块，块作为一个整体参与拖拽排序
+  const blocks: ItemModel[][] = []
+  for (const item of day.items) {
+    if (!item.parentId) {
+      blocks.push([item])
+    } else if (blocks.length > 0) {
+      blocks[blocks.length - 1].push(item)
+    } else {
+      blocks.push([item])
+    }
+  }
+  const blockIds = blocks.map((b) => b[0].id)
+
+  // 景点序号：大景点按顺序用带圈数字编号，小景点按所属大景点用罗马数字编号
   let locSeq = 0
+  const subSeq = new Map<string, number>()
+  const seqInfo = new Map<string, { seq?: number; roman?: number }>()
+  for (const item of day.items) {
+    if (item.type === 'location' && !item.parentId) {
+      locSeq += 1
+      seqInfo.set(item.id, { seq: locSeq })
+    } else if (item.type === 'location' && item.parentId) {
+      const n = (subSeq.get(item.parentId) || 0) + 1
+      subSeq.set(item.parentId, n)
+      seqInfo.set(item.id, { roman: n })
+    }
+  }
 
   const commitRoute = () => {
     setEditingRoute(false)
@@ -91,13 +141,24 @@ export default function DayBlock({
     onEditRoute(cities.length > 1 ? cities.join(' → ') : cities[0] || '')
   }
 
+  // 进入编辑模式时自动展开当天；收起当天时自动退出编辑模式
+  const handleToggleEdit = () => {
+    const next = !editing
+    setEditing(next)
+    if (next && collapsed) onToggleCollapse()
+  }
+  const handleToggleCollapse = () => {
+    if (!collapsed) setEditing(false)
+    onToggleCollapse()
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`day${collapsed ? ' collapsed' : ''}${isDragging ? ' dragging' : ''}`}
     >
-      <div className="day-head" onClick={onToggleCollapse}>
+      <div className="day-head" onClick={handleToggleCollapse}>
         <div className="day-head-top">
           <span
             className="drag-handle"
@@ -112,7 +173,7 @@ export default function DayBlock({
           <span className="flex-spacer" />
           <div className="day-actions" onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={() => setEditing((v) => !v)}
+              onClick={handleToggleEdit}
               aria-label={editing ? '完成编辑' : '编辑当天攻略'}
               style={
                 editing
@@ -140,7 +201,7 @@ export default function DayBlock({
             className="fold"
             onClick={(e) => {
               e.stopPropagation()
-              onToggleCollapse()
+              handleToggleCollapse()
             }}
           >
             {collapsed ? '▸' : '▾'}
@@ -174,26 +235,26 @@ export default function DayBlock({
 
       {!collapsed && (
         <>
-          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
             <div className="day-body">
-              {day.items.map((item) => {
-                if (item.type === 'location') locSeq += 1
-                return (
-                  <SortableItemRow
-                    key={item.id}
-                    item={item}
-                    seq={item.type === 'location' ? locSeq : undefined}
-                    dayNumber={day.dayNumber}
-                    editing={editing}
-                    onClickEdit={() => onEditItem(item)}
-                    onDoubleClickEdit={() => {
-                      setEditing(true)
-                      onEditItem(item)
-                    }}
-                    onDelete={() => onDeleteItem(item)}
-                  />
-                )
-              })}
+              {blocks.map((block) => (
+                <SortableBlockRow
+                  key={block[0].id}
+                  block={block}
+                  dayNumber={day.dayNumber}
+                  editing={editing}
+                  seqInfo={seqInfo}
+                  onClickEdit={(item) => onEditItem(item)}
+                  onDoubleClickEdit={(item) => {
+                    setEditing(true)
+                    onEditItem(item)
+                  }}
+                  onDelete={(item) => onDeleteItem(item)}
+                  onAddSub={
+                    block[0].type === 'location' ? () => onAddSub(block[0].id) : undefined
+                  }
+                />
+              ))}
               {day.items.length === 0 && (
                 <div className="empty-day">
                   {editing ? '点击下方「＋ 添加条目」开始规划路线' : '这一天还没有安排~'}

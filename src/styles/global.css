@@ -538,6 +538,18 @@ select {
   color: var(--c-ticket);
   font-size: 14px;
   line-height: 21px;
+  transform: translateY(-1px); /* 带圈数字视觉偏下，向上微调与名称对齐 */
+}
+/* 小景点：拖拽手柄、序号与文字整体缩进，序号与文字左对齐；无分隔虚线 */
+.item.sub {
+  font-size: 14px;
+  padding-left: calc(15px + 3.5em);
+  border-top: none;
+}
+.item.sub .seq {
+  width: 22px;
+  text-align: left;
+  transform: none;
 }
 .check {
   flex-shrink: 0;
@@ -596,13 +608,28 @@ select {
   border: none;
   color: var(--ink-3);
   font-size: 13px;
-  padding: 2px 3px;
+  padding: 0 4px;
   cursor: pointer;
   flex-shrink: 0;
-  line-height: 1;
+  line-height: 21px; /* 与文字行高一致，使符号垂直居中、和 + 对齐 */
 }
 .item-delete:hover {
   color: var(--c-ticket);
+}
+/* 大景点右侧的「+ 添加小景点」按钮（与删除按钮同行高、垂直居中对齐） */
+.item-add-sub {
+  background: none;
+  border: none;
+  color: var(--ink-3);
+  font-size: 21px;
+  padding: 0 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 21px;
+  transform: translateY(-2px); /* 手动上移与删除键 ✕ 对齐 */
+}
+.item-add-sub:hover {
+  color: var(--brown);
 }
 .flex-spacer {
   flex: 1;

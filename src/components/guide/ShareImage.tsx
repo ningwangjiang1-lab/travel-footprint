@@ -1,6 +1,7 @@
 import { forwardRef } from 'react'
 import type { Guide, Item } from '../../types'
 import { formatDateCn, formatFullDate, daysBetween } from '../../lib/format'
+import { toRoman } from '../../lib/seq'
 
 function itemIcon(item: Item): string {
   if (item.type === 'transport') return item.metadata?.transportEmoji || '🚞'
@@ -42,6 +43,18 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
       <div style={{ marginTop: 18 }}>
         {guide.days.map((day) => {
           let locSeq = 0
+          const subSeq = new Map<string, number>()
+          const seqInfo = new Map<string, { seq?: number; roman?: number }>()
+          for (const item of day.items) {
+            if (item.type === 'location' && !item.parentId) {
+              locSeq += 1
+              seqInfo.set(item.id, { seq: locSeq })
+            } else if (item.type === 'location' && item.parentId) {
+              const n = (subSeq.get(item.parentId) || 0) + 1
+              subSeq.set(item.parentId, n)
+              seqInfo.set(item.id, { roman: n })
+            }
+          }
           return (
             <div key={day.id} style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>
@@ -50,7 +63,8 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
               </div>
               <div style={{ marginTop: 5 }}>
                 {day.items.map((item) => {
-                  if (item.type === 'location') locSeq += 1
+                  const info = seqInfo.get(item.id)
+                  const isSub = !!item.parentId
                   return (
                     <div
                       key={item.id}
@@ -60,6 +74,7 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
                         fontSize: 12,
                         color: '#8A7A68',
                         padding: '2px 0',
+                        paddingLeft: isSub ? 24 : 0,
                         alignItems: 'flex-start',
                       }}
                     >
@@ -71,7 +86,17 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
                           justifyContent: 'center',
                         }}
                       >
-                        {item.type === 'location' ? (
+                        {isSub ? (
+                          <span
+                            style={{
+                              lineHeight: 1.5,
+                              fontWeight: 700,
+                              color: '#C4643F',
+                            }}
+                          >
+                            {toRoman(info?.roman ?? 0)}
+                          </span>
+                        ) : item.type === 'location' ? (
                           <span
                             style={{
                               width: 13,
@@ -90,7 +115,7 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
                             }}
                           >
                             <span style={{ transform: 'translateX(0.5px)' }}>
-                              {locSeq}
+                              {info?.seq ?? 0}
                             </span>
                           </span>
                         ) : (
@@ -119,7 +144,7 @@ const ShareImage = forwardRef<HTMLDivElement, ShareImageProps>(({ guide }, ref) 
           letterSpacing: 1,
         }}
       >
-        旅行足迹·留存旅途的点滴
+        旅行足迹 · 记录每一段旅程
       </div>
     </div>
   )

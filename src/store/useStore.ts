@@ -48,7 +48,14 @@ interface StoreState {
   addItem: (
     guideId: string,
     dayNumber: number,
-    input: { type: Item['type']; content: string; note?: string; metadata?: Item['metadata'] },
+    input: {
+      type: Item['type']
+      content: string
+      note?: string
+      metadata?: Item['metadata']
+      /** 小景点：所属大景点条目 id（插入到其下） */
+      parentId?: string
+    },
   ) => void
   updateItem: (
     guideId: string,
@@ -213,6 +220,21 @@ export const useStore = create<StoreState>()(
                 note: input.note?.trim() || undefined,
                 order: d.items.length,
                 metadata: input.metadata || {},
+                ...(input.parentId ? { parentId: input.parentId } : {}),
+              }
+              // 小景点：插入到所属大景点之下（紧跟其已有小景点）
+              if (input.parentId) {
+                const items = [...d.items]
+                const parentIdx = items.findIndex((it) => it.id === input.parentId)
+                let insertAt = parentIdx === -1 ? items.length : parentIdx + 1
+                while (insertAt < items.length && items[insertAt].parentId === input.parentId) {
+                  insertAt += 1
+                }
+                items.splice(insertAt, 0, item)
+                return {
+                  ...d,
+                  items: items.map((it, i) => ({ ...it, order: i })),
+                }
               }
               return { ...d, items: [...d.items, item] }
             }),
@@ -234,8 +256,9 @@ export const useStore = create<StoreState>()(
           guides: mapGuide(s.guides, guideId, (g) =>
             mapDay(g, dayNumber, (d) => ({
               ...d,
+              // 删除大景点时连同其小景点一起删除
               items: d.items
-                .filter((it) => it.id !== itemId)
+                .filter((it) => it.id !== itemId && it.parentId !== itemId)
                 .map((it, i) => ({ ...it, order: i })),
             })),
           ),
@@ -246,11 +269,33 @@ export const useStore = create<StoreState>()(
           guides: mapGuide(s.guides, guideId, (g) =>
             mapDay(g, dayNumber, (d) => {
               const items = [...d.items]
-              const [moved] = items.splice(from, 1)
-              items.splice(to, 0, moved)
+              const dragged = items[from]
+              if (!dragged) return d
+              // 大景点连同其小景点作为一个整体移动
+              const isParent = dragged.type === 'location' && !dragged.parentId
+              const blockIds = new Set<string>([dragged.id])
+              if (isParent) {
+                for (const it of items) {
+                  if (it.parentId === dragged.id) blockIds.add(it.id)
+                }
+              }
+              const overItem = items[to]
+              // 拖到自己 / 自己的小景点上，保持原位
+              if (!overItem || blockIds.has(overItem.id)) return d
+              const block = items.filter((it) => blockIds.has(it.id))
+              const rest = items.filter((it) => !blockIds.has(it.id))
+              let overStart = rest.findIndex((it) => it.id === overItem.id)
+              if (overStart < 0) overStart = rest.length
+              // over 若是大景点，其后紧跟的小景点同属一整块，向下移动时需跳过它们
+              let overEnd = overStart
+              while (overEnd + 1 < rest.length && rest[overEnd + 1].parentId === overItem.id) {
+                overEnd += 1
+              }
+              const insertIdx = to > from ? overEnd + 1 : overStart
+              rest.splice(insertIdx, 0, ...block)
               return {
                 ...d,
-                items: items.map((it, i) => ({ ...it, order: i })),
+                items: rest.map((it, i) => ({ ...it, order: i })),
               }
             }),
           ),

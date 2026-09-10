@@ -99,6 +99,8 @@ interface ItemFormState {
   type: ItemType
   /** 编辑已有条目时传入其 id；为空表示新增 */
   itemId?: string
+  /** 小景点：所属大景点条目 id（新增小景点时传入） */
+  parentId?: string
 }
 
 /** 攻略编辑页（开发计划 Step 4–5、8） */
@@ -231,6 +233,15 @@ export default function EditorPage() {
     setStruct({ no: '', from: '', fromTime: '', toTime: '', to: '' })
   }
 
+  const openSubForm = (dayNumber: number, parentId: string) => {
+    setForm({ dayNumber, type: 'location', parentId })
+    setSheetDay(null)
+    setContent('')
+    setNote('')
+    setTransportEmoji('🚞')
+    setStruct({ no: '', from: '', fromTime: '', toTime: '', to: '' })
+  }
+
   const openEditForm = (dayNumber: number, item: Item) => {
     setForm({ dayNumber, type: item.type, itemId: item.id })
     setSheetDay(null)
@@ -278,7 +289,7 @@ export default function EditorPage() {
     if (form.itemId) {
       // 二次编辑：更新已有条目
       updateItem(guide.id, form.dayNumber, form.itemId, patch)
-      if (form.type === 'location') {
+      if (form.type === 'location' && !form.parentId) {
         const day = guide.days.find((d) => d.dayNumber === form.dayNumber)
         const old = day?.items.find((i) => i.id === form.itemId)
         if (old && old.content !== finalContent) {
@@ -287,8 +298,13 @@ export default function EditorPage() {
         upsertLocation({ name: finalContent, city: inferCity(form.dayNumber) })
       }
     } else {
-      addItem(guide.id, form.dayNumber, { type: form.type, ...patch })
-      if (form.type === 'location') {
+      addItem(guide.id, form.dayNumber, {
+        type: form.type,
+        ...patch,
+        ...(form.parentId ? { parentId: form.parentId } : {}),
+      })
+      // 小景点不单独点亮地图
+      if (form.type === 'location' && !form.parentId) {
         upsertLocation({ name: finalContent, city: inferCity(form.dayNumber) })
       }
     }
@@ -325,6 +341,7 @@ export default function EditorPage() {
               onEditRoute={(route) => updateDay(guide.id, day.dayNumber, { route })}
               onEditItem={(item) => openEditForm(day.dayNumber, item)}
               onDeleteItem={(item) => setDeleteItem({ dayNumber: day.dayNumber, item })}
+              onAddSub={(parentId) => openSubForm(day.dayNumber, parentId)}
             />
           ))}
         </SortableContext>

@@ -8,14 +8,16 @@ export function flatItems(guide: Guide): Item[] {
   return guide.days.flatMap((d) => d.items)
 }
 
-/** 景点（location）条目数 */
+/** 景点（location）条目数（不含小景点） */
 export function countLocations(guide: Guide): number {
-  return flatItems(guide).filter((i) => i.type === 'location').length
+  return flatItems(guide).filter((i) => i.type === 'location' && !i.parentId).length
 }
 
-/** 可打卡条目数（景点 + 美食） */
+/** 可打卡条目数（景点 + 美食；小景点不单独打卡） */
 function checkableItems(guide: Guide): Item[] {
-  return flatItems(guide).filter((i) => i.type === 'location' || i.type === 'food')
+  return flatItems(guide).filter(
+    (i) => (i.type === 'location' || i.type === 'food') && !i.parentId,
+  )
 }
 
 /** 完成进度 0~1（已打卡 / 可打卡条目数） */

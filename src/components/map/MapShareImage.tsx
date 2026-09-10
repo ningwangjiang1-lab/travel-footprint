@@ -43,7 +43,9 @@ const MapShareImage = forwardRef<HTMLDivElement, MapShareImageProps>(({ litCitie
             type: 'map',
             map: 'china',
             roam: false,
+            zoom: 1.12,
             label: { show: false },
+            emphasis: { disabled: true },
             itemStyle: {
               areaColor: '#EBE0CB',
               borderColor: '#FFFFFF',
@@ -72,29 +74,29 @@ const MapShareImage = forwardRef<HTMLDivElement, MapShareImageProps>(({ litCitie
         width: 680,
         background: '#F7F2EA',
         color: '#3A2C1F',
-        padding: 24,
+        padding: 18,
         fontFamily: 'system-ui, "PingFang SC", "Microsoft YaHei", sans-serif',
       }}
     >
       <div>
-        <div style={{ fontSize: 26, fontWeight: 800 }}>我的足迹地图</div>
-        <div style={{ fontSize: 14, color: '#8A7A68', marginTop: 8 }}>
+        <div style={{ fontSize: 24, fontWeight: 800 }}>我的足迹地图</div>
+        <div style={{ fontSize: 13, color: '#8A7A68', marginTop: 6 }}>
           已点亮 {litCities.length} 座城市 · {litProvinces} 个省份
         </div>
       </div>
 
-      <div ref={mapRef} style={{ width: '100%', height: 380, marginTop: 20 }} />
+      <div ref={mapRef} style={{ width: '100%', height: 480, marginTop: 14 }} />
 
       <div
         style={{
-          marginTop: 20,
+          marginTop: 14,
           fontSize: 13,
           color: '#B4A893',
           textAlign: 'center',
           letterSpacing: 1,
         }}
       >
-        旅行足迹·留存旅途的点滴
+        旅行足迹 · 记录每一段旅程
       </div>
     </div>
   )
