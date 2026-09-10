@@ -6,8 +6,15 @@ const WHITE = '#FFFDF8'
 const BROWN_RGBA = { r: 139, g: 94, b: 60, alpha: 1 }
 const res = 'android/app/src/main/res'
 
-// 山川 + 太阳 标记（100x100 viewBox）
-const mark = `<circle cx="68" cy="26" r="10" fill="${WHITE}"/><path d="M6 80 L30 40 L52 66 L72 52 L94 80 L94 100 L6 100 Z" fill="${WHITE}"/>`
+// 海上落日 标记（100x100 viewBox，米白元素）
+const mark = `
+  <path d="M29 26 q6 -6 12 0 q6 -6 12 0" stroke="${WHITE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M57 33 q3.5 -3.5 7 0 q3.5 -3.5 7 0" stroke="${WHITE}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M32 58 A18 18 0 0 1 68 58 Z" fill="${WHITE}"/>
+  <path d="M38 66 q6 -3 12 0 q6 3 12 0" stroke="${WHITE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M26 78 q6 -3 12 0 q6 3 12 0 q6 -3 12 0 q6 3 12 0" stroke="${WHITE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M14 90 q6 -3 12 0 q6 3 12 0 q6 -3 12 0 q6 3 12 0 q6 -3 12 0 q6 3 12 0" stroke="${WHITE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+`
 const full = `<rect width="100" height="100" rx="24" fill="${BROWN}"/>${mark}`
 
 function svg(inner, w, h) {
@@ -45,7 +52,7 @@ const splashes = {
   'drawable-land-xxhdpi/splash.png': [1600, 960],
   'drawable-land-xxxhdpi/splash.png': [1920, 1280],
 }
-const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 14 88 86" width="500" height="490">${mark}</svg>`
+const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 20 72 70" width="720" height="700">${mark}</svg>`
 
 for (const [file, [w, h]] of Object.entries(splashes)) {
   const markH = Math.round(Math.min(w, h) * 0.32)
