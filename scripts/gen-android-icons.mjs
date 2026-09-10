@@ -6,7 +6,8 @@ const WHITE = '#FFFDF8'
 const BROWN_RGBA = { r: 139, g: 94, b: 60, alpha: 1 }
 const res = 'android/app/src/main/res'
 
-const mark = `<circle cx="50" cy="40" r="15" fill="${WHITE}"/><path d="M50 78 L32 50 L40 50 L50 63 L60 50 L68 50 Z" fill="${WHITE}"/>`
+// 山川 + 太阳 标记（100x100 viewBox）
+const mark = `<circle cx="68" cy="26" r="10" fill="${WHITE}"/><path d="M6 80 L30 40 L52 66 L72 52 L94 80 L94 100 L6 100 Z" fill="${WHITE}"/>`
 const full = `<rect width="100" height="100" rx="24" fill="${BROWN}"/>${mark}`
 
 function svg(inner, w, h) {
@@ -23,13 +24,14 @@ for (const [dpi, size] of Object.entries(legacy)) {
   await sharp(buf).toFile(`${res}/mipmap-${dpi}/ic_launcher_round.png`)
 }
 
-// 2) 自适应图标前景（透明底 + 白色标记）
+// 2) 自适应图标前景（透明底 + 白色标记，缩到中央安全区 62%）
 const fg = { mdpi: 108, hdpi: 162, xhdpi: 216, xxhdpi: 324, xxxhdpi: 432 }
+const fgSafe = `<g transform="translate(19 19) scale(0.62)">${mark}</g>`
 for (const [dpi, size] of Object.entries(fg)) {
-  await sharp(svg(mark, size, size)).png().toFile(`${res}/mipmap-${dpi}/ic_launcher_foreground.png`)
+  await sharp(svg(fgSafe, size, size)).png().toFile(`${res}/mipmap-${dpi}/ic_launcher_foreground.png`)
 }
 
-// 3) 启动图（纯棕底 + 居中标记，标记高度约短边的 30%）
+// 3) 启动图（纯棕底 + 居中标记，标记高度约为短边的 32%）
 const splashes = {
   'drawable/splash.png': [480, 320],
   'drawable-port-mdpi/splash.png': [320, 480],
@@ -43,10 +45,10 @@ const splashes = {
   'drawable-land-xxhdpi/splash.png': [1600, 960],
   'drawable-land-xxxhdpi/splash.png': [1920, 1280],
 }
-const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="32 25 36 53" width="360" height="530">${mark}</svg>`
+const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 14 88 86" width="500" height="490">${mark}</svg>`
 
 for (const [file, [w, h]] of Object.entries(splashes)) {
-  const markH = Math.round(Math.min(w, h) * 0.3)
+  const markH = Math.round(Math.min(w, h) * 0.32)
   const markBuf = await sharp(Buffer.from(markSvg)).resize({ height: markH }).png().toBuffer()
   const meta = await sharp(markBuf).metadata()
   const out = await sharp({
